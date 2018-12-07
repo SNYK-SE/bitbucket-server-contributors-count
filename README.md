@@ -1,6 +1,7 @@
+# bitbucket-server-contributers-count
 Count contributing developers to a Bitbucket Server instance in the last 90 days.
 
-#Usage
+# Usage
 pipenv install
 pipenv run python3 --hostname <your-bbserver-hostname> --token <access-token>
 
