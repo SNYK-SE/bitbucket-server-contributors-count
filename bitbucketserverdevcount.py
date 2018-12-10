@@ -2,10 +2,13 @@ import requests
 import argparse
 import datetime
 import time
+import base64
 
 # You can set these if you prefer not to use the command-line args
 bb_default_hostname = ''
 bb_default_token = ''
+bb_default_username = ''
+bb_default_password = ''
 
 lookback_time_days = 90
 lookback_time_ms = lookback_time_days * 24 * 60 * 60 * 1000
@@ -20,7 +23,11 @@ cutoff_timestamp_ms = epoch_now_ms - lookback_time_ms
 def parse_command_line_args():
     parser = argparse.ArgumentParser(description="Count developers in BitBucket.org active in the last 90 days")
     parser.add_argument('--hostname', type=str, help='BitBucket Server Hostname')
+
     parser.add_argument('--token', type=str, help='BitBucket Server Personal Access Token')
+
+    parser.add_argument('--username', type=str, help='BitBucket Server Username')
+    parser.add_argument('--password', type=str, help='BitBucket Server Password')
 
     args = parser.parse_args()
 
@@ -30,8 +37,25 @@ def parse_command_line_args():
     if args.token is None:
         args.token = bb_default_token
 
-    if args.hostname == '' or \
-            args.token == '':
+    if args.username is None:
+        args.username = bb_default_username
+
+    if args.password is None:
+        args.password = bb_default_password
+
+    if args.token != '' and args.username != '':
+        print('You can either set --token or --username but not both.')
+        parser.print_usage()
+        parser.print_help()
+        quit()
+
+    if args.token == '' and args.username == '':
+        print('You must use either --token XOR (--username and --password)')
+        parser.print_usage()
+        parser.print_help()
+        quit()
+
+    if args.hostname == '':
         parser.print_usage()
         parser.print_help()
         quit()
@@ -40,7 +64,7 @@ def parse_command_line_args():
 
 
 def get_bitbucket_server_api_return_json(full_api_url):
-    headers = get_headers_for_bitbucket_server_api()
+    headers = get_auth_headers()
     resp = requests.get(full_api_url, headers=headers)
     obj_json_response = resp.json()
     return obj_json_response
@@ -104,16 +128,47 @@ def bail_if_commit_older_than_target_days_delegate(next_commit):
     return False
 
 
-def get_headers_for_bitbucket_server_api():
+def get_token_based_auth_headers():
     headers = {
         'Authorization': 'Bearer %s' % bb_token
     }
     return headers
 
 
+def get_basic_auth_headers():
+    pre_encoded_auth_string = '%s:%s' % (bb_username, bb_password)
+    encoded_auth_string = base64.standard_b64encode(pre_encoded_auth_string.encode('utf-8')).decode()
+
+    headers = {
+        'Authorization': 'Basic %s' % encoded_auth_string
+    }
+    return headers
+
+
+def is_use_token_auth():
+    if bb_token is not None and bb_token != '':
+        return True
+    else:
+        return False
+
+
+def get_auth_headers():
+    if is_use_token_auth():
+        return get_token_based_auth_headers()
+    else:
+        return get_basic_auth_headers()
+
+
 args = parse_command_line_args()
 bb_token = args.token
 bb_hostname = args.hostname
+bb_username = args.username
+bb_password = args.password
+
+if is_use_token_auth():
+    print('Using Personal Access Token')
+else:
+    print('Using Basic Auth')
 
 
 # List projects
