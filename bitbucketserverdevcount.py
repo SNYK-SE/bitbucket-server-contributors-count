@@ -3,6 +3,7 @@ import argparse
 import datetime
 import time
 import base64
+import json
 
 # You can set these if you prefer not to use the command-line args
 bb_default_hostname = ''
@@ -89,7 +90,13 @@ def iteratively_get_all_pages_of_paged_api(api_url, bail_early_delegate=None):
 
     while continue_loop:
         obj_json_response = get_page_of_paged_api(api_url, start)
-        new_values = obj_json_response['values']
+
+        try:
+            new_values = obj_json_response['values']
+        except KeyError as k:
+            print('WARNING: key \'values\' not found in JSON response.')
+            print(json.dumps(obj_json_response, indent=4))
+            break
 
         # Check bail_early_delegate to see if we should stop iterating
         for next_value in new_values:
