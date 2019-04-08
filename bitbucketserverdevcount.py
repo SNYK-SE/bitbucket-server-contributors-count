@@ -22,13 +22,16 @@ cutoff_timestamp_ms = epoch_now_ms - lookback_time_ms
 
 
 def parse_command_line_args():
-    parser = argparse.ArgumentParser(description="Count developers in BitBucket.org active in the last 90 days")
-    parser.add_argument('--hostname', type=str, help='BitBucket Server Hostname')
+    parser = argparse.ArgumentParser(description="Count developers in Bitbucket.org active in the last 90 days")
+    parser.add_argument('--hostname', type=str, help='Bitbucket Server Hostname')
 
-    parser.add_argument('--token', type=str, help='BitBucket Server Personal Access Token')
+    parser.add_argument('--token', type=str, help='Bitbucket Server Personal Access Token')
 
-    parser.add_argument('--username', type=str, help='BitBucket Server Username')
-    parser.add_argument('--password', type=str, help='BitBucket Server Password')
+    parser.add_argument('--username', type=str, help='Bitbucket Server Username')
+    parser.add_argument('--password', type=str, help='Bitbucket Server Password')
+
+    parser.add_argument('--project-name', type=str, help='Bitbucket Server project name')
+    parser.add_argument('--repo-name', type=str, help='Bitbucket Server repo name')
 
     args = parser.parse_args()
 
@@ -171,6 +174,14 @@ bb_token = args.token
 bb_hostname = args.hostname
 bb_username = args.username
 bb_password = args.password
+args_project_name = args.project_name
+args_repo_name = args.repo_name
+
+if args_project_name:
+    print('Using only projects with the name: %s\n' % args_project_name)
+
+if args_repo_name:
+    print('Using only repos with the name: %s\n' % args_repo_name)
 
 if is_use_token_auth():
     print('Using Personal Access Token')
@@ -185,12 +196,23 @@ full_api_url = 'https://%s/rest/api/1.0/projects' % bb_hostname
 # get_all_pages_of_paged_api(full_api_url)
 values = iteratively_get_all_pages_of_paged_api(full_api_url)
 
-print("Projects found:")
+print("\nProjects found:")
 for next_value in values:
-    print(next_value['key'])
-    all_projects.append(next_value['key'])
-print()
+    project_name = next_value['key']
+    print(project_name)
 
+    if args_project_name and project_name == args_project_name:
+        print('    Found matching project name: %s' % project_name)
+        all_projects.append(project_name)
+    elif args_project_name and project_name != args_project_name:
+        print('    Skipping non-matching project name: %s' % project_name)
+        continue
+    else:
+        # --project-name not set
+        all_projects.append(project_name)
+
+
+print()
 # Get Repos for each Project
 unique_authors = []
 all_repos_slugs = []
@@ -205,6 +227,12 @@ for next_project_key in all_projects:
         all_repos_slugs.append(next_repo['slug'])
         next_repo_slug = next_repo['slug']
         print('  Repo: %s' % next_repo_slug)
+
+        if args_repo_name and next_repo_slug == args_repo_name:
+            print('    Found matching repo: %s / %s' % (next_project_key, next_repo_slug))
+        elif args_repo_name and next_repo_slug != args_repo_name:
+            print('    Skipping non-matching repo: %s / %s' % (next_project_key, next_repo_slug))
+            continue
 
         # Get Commits for each Repo
         # /rest/api/1.0/projects/{projectKey}/repos/{repositorySlug}/commits

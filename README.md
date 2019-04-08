@@ -1,7 +1,7 @@
 # bitbucket-server-contributors-count
 Count contributing developers to a Bitbucket Server instance in the last 90 days.
 
-# Usage
+## Usage
 Install virtual environment with:
 
 `pipenv install`
@@ -20,3 +20,8 @@ or
 
 
 Hostname means hostname, not URL... for example use `stash.xyzco.com` not `https://stash.zyxco.com`
+
+## Additional Filtering
+You can filter by Bitbucket Server project using `--project-name=<project-name>`.
+
+You can filter by repo name using `--repo-name=<repo-name>`.
